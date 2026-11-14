@@ -2,5 +2,7 @@
   "name": "thumbloop",
   "main": "src/worker.js",
   "compatibility_date": "2026-11-13",
+  "workers_dev": true,
+  "preview_urls": false,
   "rules": [{ "type": "Text", "globs": ["**/*.html"], "fallthrough": true }]
 }
