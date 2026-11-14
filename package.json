@@ -1,0 +1,8 @@
+{
+  "name": "thumbloop",
+  "private": true,
+  "scripts": {
+    "build": "echo \"No build step: public/index.html is served as is\"",
+    "deploy": "wrangler deploy"
+  }
+}
