@@ -1,0 +1,6 @@
+{
+  "name": "thumbloop",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-11-13",
+  "rules": [{ "type": "Text", "globs": ["**/*.html"], "fallthrough": true }]
+}
