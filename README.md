@@ -5,4 +5,4 @@ Single static page, Web Audio only, no build step.
 
 - `public/index.html` is the whole app.
 - `src/worker.js` is a small Cloudflare Worker that serves it.
-- Deploy: `npx wrangler deploy`
+- Deploys automatically on every push to `main` (`.github/workflows/deploy.yml`, needs the `CLOUDFLARE_API_TOKEN` repository secret). Manual deploy: `npx wrangler deploy`
