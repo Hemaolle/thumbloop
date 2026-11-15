@@ -270,16 +270,18 @@ const demo = () => ({
   ]
 });
 const serTracks = () => S.tracks.map(t => ({sound:t.sound, bars:t.bars, q:t.q, oct:t.oct, mute:t.mute,
-  notes:t.notes.map(n => n.c ? [+n.s.toFixed(4), +n.d.toFixed(4), n.p, n.o, 1] : [+n.s.toFixed(4), +n.d.toFixed(4), n.p, n.o])}));
+  notes:t.notes.map(n => n.c ? [+n.s.toFixed(4), +n.d.toFixed(4), n.p, n.o, n.c] : [+n.s.toFixed(4), +n.d.toFixed(4), n.p, n.o])}));
 const serialize = () => ({v:1, bpm:S.bpm, key:S.key, scale:S.scale, met:S.met, sel:S.sel, surface:S.surface, lefty:S.lefty, tracks:serTracks()});
 const deTracks = arr => arr.slice(0,4).map(t => ({
   sound:SOUNDS[t.sound] ? t.sound : 'keys', bars:[1,2,4,8].includes(t.bars) ? t.bars : 2,
   q:t.q in QG ? t.q : '16', oct:Math.max(-2,Math.min(2,t.oct|0)), mute:!!t.mute,
-  notes:(t.notes||[]).map(n => ({s:+n[0]||0, d:+n[1]||.1, p:n[2]|0, o:n[3]|0, ...(n[4] ? {c:1} : {})}))}));
+  notes:(t.notes||[]).map(n => ({s:+n[0]||0, d:+n[1]||.1, p:n[2]|0, o:n[3]|0, ...(n[4] ? {c:n[4] === 2 ? 2 : 1} : {})}))}));
 function load(d){
   if(!d || !Array.isArray(d.tracks) || d.tracks.length !== 4) return false;
   S = {bpm:Math.max(50,Math.min(200,d.bpm|0||92)), key:((d.key|0)%12+12)%12, scale:SCALES[d.scale]?d.scale:'minpent',
        met:d.met !== false, sel:Math.max(0,Math.min(3,d.sel|0)), surface:d.surface === 'valves' ? 'valves' : 'pads', lefty:!!d.lefty, tracks:deTracks(d.tracks)};
+  // Melodic notes are stored as absolute MIDI pitches (c:2). Older saves held scale positions; convert them once.
+  S.tracks.forEach(t => { if(t.sound !== 'drums') t.notes.forEach(n => { if(n.c !== 2){ n.p = n.c ? midiC(n.p,n.o) : midiOf(n.p,n.o); n.o = 0; n.c = 2; } }); });
   return true;
 }
 let saveT;
@@ -440,7 +442,7 @@ function click(t, accent){
 /* Start one note. dur (seconds) schedules its release; null leaves it held. */
 function trigger(tr, p, o, t, dur, dest, c){
   if(tr.sound === 'drums'){ if(p < 12) drum(p, t, dest); return null; }
-  const sd = SOUNDS[tr.sound], freq = 440 * Math.pow(2, ((c ? midiC(p,o) : midiOf(p,o)) - 69)/12);
+  const sd = SOUNDS[tr.sound], freq = 440 * Math.pow(2, ((c === 2 ? p : c ? midiC(p,o) : midiOf(p,o)) - 69)/12);
   const v = sd.fm ? fmVoice(freq, t, dest) : synthVoice(sd, freq, t, dest);
   if(dur != null) v.release(t + dur);
   return v;
@@ -470,7 +472,7 @@ function tick(){
         if(n.mu && t < n.mu) continue;
         const dur = Math.max(.05, n.d*spb);
         trigger(tr, n.p, n.o, t, dur, nodes[i].in, n.c);
-        if(!n.c && i === S.sel && (tr.sound === 'drums' || n.o === tr.oct)) flashes.push({t, end:t + Math.max(.1, dur), p:n.p});
+        if(i === S.sel){ const fp = tr.sound === 'drums' ? n.p : padOfMidi.get(n.p); if(fp != null) flashes.push({t, end:t + Math.max(.1, dur), p:fp}); }
       }
     });
   }
@@ -540,6 +542,7 @@ const noteName = (i,o) => mName(midiOf(i,o));
 const SHARP = ['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
 const chromName = (c,o) => { const m = midiC(c,o); return SHARP[((m % 12) + 12) % 12] + (Math.floor(m/12) - 1); };
 const valvesOn = () => S.surface === 'valves' && cur().sound !== 'drums';
+const padOfMidi = new Map();
 function padDown(key, idx, at, chrom){
   if(held.has(key)) return;
   ensureAudio();
@@ -551,8 +554,8 @@ function padDown(key, idx, at, chrom){
     let extra = QG[tr.q]/2, s = null;
     if(b >= 0) s = b % L; else if(b > -.3){ s = 0; extra = Math.max(extra, -b); }
     if(s != null){
-      note = {s, d:drums ? .1 : .25, p:idx, o:tr.oct, open:!drums, b0:b, mu:t + extra*spb + .04};
-      if(chrom) note.c = 1;
+      note = drums ? {s, d:.1, p:idx, o:0, open:false, b0:b, mu:t + extra*spb + .04}
+        : {s, d:.25, p:chrom ? midiC(idx,tr.oct) : midiOf(idx,tr.oct), o:0, c:2, open:true, b0:b, mu:t + extra*spb + .04};
       tr.notes.push(note); dirty = true; syncClear();
     }
   }
@@ -660,6 +663,7 @@ function buildPads(){
   }
   padsEl.innerHTML = h;
   padEls = []; padsEl.querySelectorAll('.pad').forEach(el => padEls[+el.dataset.i] = el);
+  padOfMidi.clear(); if(!drums) padEls.forEach((el,i) => padOfMidi.set(midiOf(i, tr.oct), i));
   litPrev = new Set();
 }
 function buildValves(){
@@ -673,7 +677,7 @@ function buildValves(){
   h += '<div class="vrow"><button id="vflip" aria-label="Flip layout for the other hand">Flip</button><button id="vfull" aria-label="Toggle fullscreen valves">' + (full ? 'Exit' : 'Full') + '</button></div></div><div class="vkeys"><div class="vfan">';
   ['1','2','3'].forEach((l,b) => { h += `<button class="vkey" data-b="${b}" aria-label="Valve ${l}">${l}</button>`; });
   padsEl.innerHTML = h + '</div></div>';
-  padEls = []; litPrev = new Set(); vChart();
+  padEls = []; padOfMidi.clear(); litPrev = new Set(); vChart();
 }
 const KEYROWS = ['zxcvb','asdfg','qwert','12345'];
 window.addEventListener('keydown', e => {
@@ -734,7 +738,7 @@ function drawLane(i, beat){
   g.fillStyle = tr.mute ? C_DIM : COL[i];
   for(const n of tr.notes){
     if(n.s >= L) continue;
-    const x = qpos(n,tr,L)/L*w, y = h - pad - nh - Math.min(1, n.c ? n.p/40 : n.p/maxP)*(h - 2*pad - nh);
+    const x = qpos(n,tr,L)/L*w, y = h - pad - nh - Math.min(1, Math.max(0, n.c === 2 ? (n.p - 28)/64 : n.p/maxP))*(h - 2*pad - nh);
     const wd = tr.sound === 'drums' ? 3*dpr : Math.max(3*dpr, n.d/L*w - dpr);
     g.fillRect(x, y, wd, nh);
     if(x + wd > w) g.fillRect(0, y, x + wd - w, nh);
