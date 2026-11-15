@@ -145,10 +145,10 @@ select:disabled{opacity:.35}
 #vflip,#vfull{height:30px;flex:none;border-radius:8px;border:1px solid var(--line);background:var(--panel);
   font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
 .vkeys{grid-column:2;grid-row:2;display:grid;place-items:center;min-width:0;min-height:0}
-.vfan{width:80%;height:58%;display:flex;gap:8px;align-items:flex-start;transform:rotate(-28deg)}
-.vkey{flex:1;min-width:0;height:66%;border-radius:16px;background:var(--key-hi);border:1px solid var(--line);
-  transform:translateY(var(--drop,0%));touch-action:none;display:flex;align-items:flex-end;justify-content:center;
-  padding:0 0 10px;font-family:var(--mono);font-size:15px;font-weight:500;color:var(--dim)}
+.vfan{width:100%;height:100%;display:flex;flex-direction:column-reverse;gap:8px;align-items:flex-start}
+.vkey{flex:1;min-height:0;width:66%;border-radius:16px;background:var(--key-hi);border:1px solid var(--line);
+  transform:translateX(var(--drop,0%));touch-action:none;display:flex;align-items:center;justify-content:flex-end;
+  padding:0 16px 0 0;font-family:var(--mono);font-size:15px;font-weight:500;color:var(--dim)}
 .vkey[data-b="0"]{--drop:22%}
 .vkey[data-b="1"]{--drop:0%}
 .vkey[data-b="2"]{--drop:8%}
@@ -157,7 +157,8 @@ select:disabled{opacity:.35}
 .pads.valves.lefty{grid-template-columns:1fr auto}
 .pads.valves.lefty .voct{grid-column:2}
 .pads.valves.lefty .vkeys{grid-column:1}
-.pads.valves.lefty .vfan{flex-direction:row-reverse;transform:rotate(28deg)}
+.pads.valves.lefty .vfan{align-items:flex-end}
+.pads.valves.lefty .vkey{transform:translateX(calc(-1*var(--drop,0%)));justify-content:flex-start;padding:0 0 0 16px}
 .pads.valves.lefty .vcell .dots{flex-direction:row-reverse}
 
 .app.full .top,.app.full .lanes,.app.full .strip{display:none}
@@ -167,8 +168,6 @@ select:disabled{opacity:.35}
   .app.full .pads.valves .voct{grid-column:1;grid-row:3;flex-direction:row-reverse;width:auto;height:52px}
   .app.full .pads.valves .vkeys{grid-column:1}
   .app.full #vflip,.app.full #vfull{height:auto;width:46px;order:-1}
-  .app.full .vfan{width:84%;height:36%;transform:rotate(-40deg)}
-  .app.full .pads.valves.lefty .vfan{transform:rotate(40deg)}
 }
 @media (orientation:landscape) and (max-height:540px){
   .app{max-width:none;grid-template-rows:minmax(0,1fr);grid-template-columns:minmax(300px,5fr) 6fr}
@@ -177,8 +176,9 @@ select:disabled{opacity:.35}
 }
 .app.full{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
 @media (orientation:landscape){
-  .app.full .vfan{width:55%;height:66%;transform:rotate(-12deg)}
-  .app.full .pads.valves.lefty .vfan{transform:rotate(12deg)}
+  .app.full .vfan{width:55%;height:66%;flex-direction:row;align-items:flex-start;transform:rotate(-12deg)}
+  .app.full .pads.valves .vkey{width:auto;height:66%;transform:translateY(var(--drop,0%));align-items:flex-end;justify-content:center;padding:0 0 10px}
+  .app.full .pads.valves.lefty .vfan{flex-direction:row-reverse;align-items:flex-start;transform:rotate(12deg)}
 }
 @media (prefers-reduced-motion:reduce){.counting .rec i{animation:none}}
 </style>
