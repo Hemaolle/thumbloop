@@ -41,9 +41,11 @@ button{border:0;background:none;padding:0;cursor:pointer}
 .deck::-webkit-scrollbar{display:none}
 
 .top{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.mark{margin:0;font-size:19px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;line-height:1}
+.mark{margin:0;flex:none;font-size:17px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;line-height:1}
 .mark span{color:var(--lane)}
-.keysel{display:flex;gap:6px;min-width:0}
+.keysel{display:flex;gap:6px;min-width:0;flex:0 1 auto}
+.keysel select{min-width:0;flex:0 1 auto}
+#surf{height:36px;flex:none;min-width:0;padding:0 10px;border-radius:10px}
 
 select{appearance:none;-webkit-appearance:none;background:var(--panel);border:1px solid var(--line);
   border-radius:8px;height:36px;padding:0 8px;font-size:16px;font-weight:600;min-width:0;
@@ -123,6 +125,39 @@ select:disabled{opacity:.35}
 .drums .pad{font-family:var(--display);font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink)}
 .drums .pad.on{color:var(--chassis)}
 
+.pads.valves{grid-template-columns:auto 1fr;grid-template-rows:auto 1fr;gap:8px}
+.vchart{grid-column:1/-1;grid-row:1;display:grid;grid-template-columns:repeat(8,1fr);gap:4px;min-width:0}
+.vcell{height:44px;min-width:0;border-radius:8px;background:var(--key);border:1px solid var(--line);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  font-family:var(--mono);font-size:10px;font-weight:500;color:var(--dim)}
+.vcell b{font-weight:500;line-height:1;white-space:nowrap}
+.vcell.root{color:var(--ink)}
+.vcell .dots{display:flex;gap:3px}
+.vcell .dots i{width:6px;height:6px;border-radius:50%;background:var(--line);display:block}
+.vcell .dots i.f{background:var(--ink)}
+.vcell.echo{background:color-mix(in srgb,var(--lane) 38%,var(--key));color:var(--ink)}
+.vcell.on{background:var(--lane);border-color:var(--lane);color:var(--chassis)}
+.vcell.on .dots i.f{background:var(--chassis)}
+.voct{grid-column:1;grid-row:2;display:flex;flex-direction:column;gap:6px;width:76px;min-height:0}
+.vo{flex:1;min-height:0;border-radius:10px;background:var(--key);border:1px solid var(--line);
+  font-family:var(--mono);font-size:13px;font-weight:500;color:var(--ink);touch-action:none}
+.vo[aria-pressed="true"]{background:var(--lane);border-color:var(--lane);color:var(--chassis)}
+#vflip{height:30px;flex:none;border-radius:8px;border:1px solid var(--line);background:var(--panel);
+  font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.vkeys{grid-column:2;grid-row:2;display:flex;gap:8px;align-items:flex-start;min-width:0;min-height:0}
+.vkey{flex:1;min-width:0;height:66%;border-radius:16px;background:var(--key-hi);border:1px solid var(--line);
+  transform:translateY(var(--drop,0%));touch-action:none;display:flex;align-items:flex-end;justify-content:center;
+  padding:0 0 10px;font-family:var(--mono);font-size:15px;font-weight:500;color:var(--dim)}
+.vkey[data-b="0"]{--drop:22%}
+.vkey[data-b="1"]{--drop:0%}
+.vkey[data-b="2"]{--drop:8%}
+.vkey[data-b="3"]{--drop:40%}
+.vkey.down{background:var(--lane);border-color:var(--lane);color:var(--chassis)}
+.pads.valves.lefty{grid-template-columns:1fr auto}
+.pads.valves.lefty .voct{grid-column:2}
+.pads.valves.lefty .vkeys{grid-column:1;flex-direction:row-reverse}
+.pads.valves.lefty .vcell .dots{flex-direction:row-reverse}
+
 @media (orientation:landscape) and (max-height:540px){
   .app{max-width:none;grid-template-rows:minmax(0,1fr);grid-template-columns:minmax(300px,5fr) 6fr}
   .play,.rec{width:48px}
@@ -137,6 +172,7 @@ select:disabled{opacity:.35}
   <div class="deck">
     <header class="top">
       <h1 class="mark">Thumb<span>loop</span></h1>
+      <button class="tbtn txt" id="surf" aria-pressed="false">Valves</button>
       <div class="keysel">
         <select id="key" aria-label="Key"></select>
         <select id="scale" aria-label="Scale"></select>
@@ -206,7 +242,7 @@ const SOUNDS = {
 let S;
 let hint = 'Ready';
 const demo = () => ({
-  bpm:92, key:9, scale:'minpent', met:true, sel:2,
+  bpm:92, key:9, scale:'minpent', met:true, sel:2, surface:'pads', lefty:false,
   tracks:[
     {sound:'drums', bars:1, q:'16', oct:0, mute:false,
       notes:[[0,.1,0],[1,.1,1],[1.75,.1,0],[2.5,.1,0],[3,.1,1],[0,.1,4],[.5,.1,4],[1,.1,4],[1.5,.1,4],[2,.1,4],[2.5,.1,4],[3,.1,4],[3.5,.1,5]].map(n=>[...n,0])},
@@ -218,7 +254,7 @@ const demo = () => ({
 });
 const serTracks = () => S.tracks.map(t => ({sound:t.sound, bars:t.bars, q:t.q, oct:t.oct, mute:t.mute,
   notes:t.notes.map(n => [+n.s.toFixed(4), +n.d.toFixed(4), n.p, n.o])}));
-const serialize = () => ({v:1, bpm:S.bpm, key:S.key, scale:S.scale, met:S.met, sel:S.sel, tracks:serTracks()});
+const serialize = () => ({v:1, bpm:S.bpm, key:S.key, scale:S.scale, met:S.met, sel:S.sel, surface:S.surface, lefty:S.lefty, tracks:serTracks()});
 const deTracks = arr => arr.slice(0,4).map(t => ({
   sound:SOUNDS[t.sound] ? t.sound : 'keys', bars:[1,2,4,8].includes(t.bars) ? t.bars : 2,
   q:t.q in QG ? t.q : '16', oct:Math.max(-2,Math.min(2,t.oct|0)), mute:!!t.mute,
@@ -226,7 +262,7 @@ const deTracks = arr => arr.slice(0,4).map(t => ({
 function load(d){
   if(!d || !Array.isArray(d.tracks) || d.tracks.length !== 4) return false;
   S = {bpm:Math.max(50,Math.min(200,d.bpm|0||92)), key:((d.key|0)%12+12)%12, scale:SCALES[d.scale]?d.scale:'minpent',
-       met:d.met !== false, sel:Math.max(0,Math.min(3,d.sel|0)), tracks:deTracks(d.tracks)};
+       met:d.met !== false, sel:Math.max(0,Math.min(3,d.sel|0)), surface:d.surface === 'valves' ? 'valves' : 'pads', lefty:!!d.lefty, tracks:deTracks(d.tracks)};
   return true;
 }
 let saveT;
@@ -477,14 +513,19 @@ function endRec(){
 /* ---------- playing surface ---------- */
 const held = new Map();
 let padEls = [];
-function padDown(key, idx){
+const VMAP = {1:0, 2:1, 4:2, 8:3, 3:4, 6:5, 12:6, 15:7};
+const VIDX = []; for(const m in VMAP) VIDX[VMAP[m]] = +m;
+let vMask = 0, vNote = -1, vTimer = null, vStamp = 0; const vPtr = new Map();
+const noteName = (i,o) => { const m = midiOf(i,o); return NOTE[((m % 12) + 12) % 12] + (Math.floor(m/12) - 1); };
+const valvesOn = () => S.surface === 'valves' && cur().sound !== 'drums';
+function padDown(key, idx, at){
   if(held.has(key)) return;
   ensureAudio();
   const tr = cur(), ti = S.sel, t = ctx.currentTime, drums = tr.sound === 'drums';
   const v = trigger(tr, idx, tr.oct, t, null, nodes[ti].live);
   let note = null;
   if(playing && recording){
-    const b = beatAt(t - (ctx.outputLatency || 0)), L = tr.bars*4, spb = 60/S.bpm;
+    const b = beatAt((at ?? t) - (ctx.outputLatency || 0)), L = tr.bars*4, spb = 60/S.bpm;
     let extra = QG[tr.q]/2, s = null;
     if(b >= 0) s = b % L; else if(b > -.3){ s = 0; extra = Math.max(extra, -b); }
     if(s != null){
@@ -504,7 +545,50 @@ function padUp(key){
   if(h.note) save();
   if(![...held.values()].some(x => x.idx === h.idx) && padEls[h.idx]) padEls[h.idx].classList.remove('on');
 }
-function releaseAll(){ [...held.keys()].forEach(padUp); }
+function vReset(){
+  vMask = 0; vNote = -1; clearTimeout(vTimer); vTimer = null; vPtr.clear();
+  padsEl.querySelectorAll('.vkey.down').forEach(el => el.classList.remove('down'));
+}
+function releaseAll(){ [...held.keys()].forEach(padUp); vReset(); }
+function valveChange(){ if(vTimer) return; vStamp = ctx.currentTime; vTimer = setTimeout(valveSettle, 30); }
+function valveSettle(){
+  vTimer = null;
+  const target = vMask === 0 ? -1 : VMAP[vMask];
+  if(target === undefined || target === vNote) return;
+  if(vNote >= 0) padUp('valve');
+  vNote = target;
+  if(vNote >= 0) padDown('valve', vNote, vStamp);
+}
+function vPress(id, bit){
+  ensureAudio(); vPtr.set(id, bit); vMask |= 1 << bit;
+  const el = padsEl.querySelector(`.vkey[data-b="${bit}"]`); if(el) el.classList.add('down');
+  valveChange();
+}
+function vRelease(id){
+  if(!vPtr.has(id)) return;
+  const bit = vPtr.get(id); vPtr.delete(id);
+  if(![...vPtr.values()].includes(bit)){
+    vMask &= ~(1 << bit);
+    const el = padsEl.querySelector(`.vkey[data-b="${bit}"]`); if(el) el.classList.remove('down');
+  }
+  valveChange();
+}
+function setOct(o){
+  ensureAudio();
+  const tr = cur(); tr.oct = o;
+  padsEl.querySelectorAll('.vo').forEach(b => b.setAttribute('aria-pressed', +b.dataset.o === o));
+  padsEl.querySelectorAll('.vcell').forEach(c => { c.querySelector('b').textContent = noteName(+c.dataset.i, o); });
+  $('#oct').value = o; save();
+  if(vNote >= 0){ padUp('valve'); padDown('valve', vNote); }
+}
+padsEl.addEventListener('pointerdown', e => {
+  const key = e.target.closest('.vkey'), oc = e.target.closest('.vo');
+  if(key){ e.preventDefault(); vPress(e.pointerId, +key.dataset.b); }
+  else if(oc){ e.preventDefault(); setOct(+oc.dataset.o); }
+});
+const vUp = e => vRelease(e.pointerId);
+window.addEventListener('pointerup', vUp); window.addEventListener('pointercancel', vUp);
+padsEl.addEventListener('click', e => { if(e.target.closest('#vflip')){ S.lefty = !S.lefty; buildPads(); save(); } });
 const padAt = (x,y) => { const el = document.elementFromPoint(x,y); const pad = el && el.closest && el.closest('.pad'); return pad ? +pad.dataset.i : -1; };
 padsEl.addEventListener('pointerdown', e => {
   const pad = e.target.closest('.pad'); if(!pad) return;
@@ -523,6 +607,9 @@ padsEl.addEventListener('contextmenu', e => e.preventDefault());
 function buildPads(){
   releaseAll();
   const tr = cur(), drums = tr.sound === 'drums', cols = drums ? 4 : 5, rows = drums ? 3 : 4, len = scaleOf().length;
+  const sb = $('#surf'); sb.setAttribute('aria-pressed', S.surface === 'valves'); sb.disabled = drums;
+  if(S.surface === 'valves' && !drums){ buildValves(); return; }
+  padsEl.classList.remove('valves','lefty');
   padsEl.style.setProperty('--cols', cols); padsEl.style.setProperty('--rows', rows);
   padsEl.classList.toggle('drums', drums);
   let h = '';
@@ -530,11 +617,26 @@ function buildPads(){
     const i = r*cols + c;
     let label, root = false;
     if(drums) label = DRUMS[i];
-    else { const m = midiOf(i, tr.oct); label = NOTE[((m % 12) + 12) % 12] + (Math.floor(m/12) - 1); root = i % len === 0; }
+    else { label = noteName(i, tr.oct); root = i % len === 0; }
     h += `<div class="pad${root ? ' root' : ''}" data-i="${i}">${label}</div>`;
   }
   padsEl.innerHTML = h;
   padEls = []; padsEl.querySelectorAll('.pad').forEach(el => padEls[+el.dataset.i] = el);
+  litPrev = new Set();
+}
+function buildValves(){
+  const tr = cur(), len = scaleOf().length;
+  padsEl.classList.add('valves'); padsEl.classList.toggle('lefty', S.lefty); padsEl.classList.remove('drums');
+  let h = '<div class="vchart">';
+  for(let i = 0; i < 8; i++)
+    h += `<div class="vcell${i % len === 0 ? ' root' : ''}" data-i="${i}"><b>${noteName(i, tr.oct)}</b><span class="dots">${
+      [0,1,2,3].map(k => `<i${VIDX[i] >> k & 1 ? ' class="f"' : ''}></i>`).join('')}</span></div>`;
+  h += '</div><div class="voct">';
+  for(const o of [2,1,0,-1,-2]) h += `<button class="vo" data-o="${o}" aria-pressed="${o === tr.oct}">${noteName(0, o)}</button>`;
+  h += '<button id="vflip" aria-label="Flip layout for the other hand">Flip</button></div><div class="vkeys">';
+  ['1','2','3','4'].forEach((l,b) => { h += `<button class="vkey" data-b="${b}" aria-label="Valve ${l}">${l}</button>`; });
+  padsEl.innerHTML = h + '</div>';
+  padEls = []; padsEl.querySelectorAll('.vcell').forEach(el => padEls[+el.dataset.i] = el);
   litPrev = new Set();
 }
 const KEYROWS = ['zxcvb','asdfg','qwert','12345'];
@@ -542,10 +644,16 @@ window.addEventListener('keydown', e => {
   if(e.repeat || e.metaKey || e.ctrlKey || e.altKey || e.target.tagName === 'SELECT') return;
   if(e.code === 'Space'){ e.preventDefault(); playing ? stop() : play(false); return; }
   if(e.key === 'Enter'){ e.preventDefault(); toggleRec(); return; }
-  const k = e.key.toLowerCase(), drums = cur().sound === 'drums', cols = drums ? 4 : 5, rows = drums ? 3 : 4;
+  const k = e.key.toLowerCase();
+  if(valvesOn()){
+    const b = 'jkl;'.indexOf(k), o = 'asdfg'.indexOf(k);
+    if(b >= 0) vPress('k' + k, b); else if(o >= 0) setOct(o - 2);
+    return;
+  }
+  const drums = cur().sound === 'drums', cols = drums ? 4 : 5, rows = drums ? 3 : 4;
   for(let r = 0; r < rows; r++){ const c = KEYROWS[r].indexOf(k); if(c >= 0 && c < cols){ padDown('k' + k, r*cols + c); return; } }
 });
-window.addEventListener('keyup', e => padUp('k' + e.key.toLowerCase()));
+window.addEventListener('keyup', e => { const k = e.key.toLowerCase(); padUp('k' + k); vRelease('k' + k); });
 
 /* ---------- lanes ---------- */
 let lanes = [];
@@ -641,6 +749,7 @@ $('#bars').addEventListener('change', e => {
   else { const base = t.notes.slice(), L = ob*4; for(let off = L; off < nb*4; off += L) base.forEach(n => t.notes.push({s:n.s + off, d:n.d, p:n.p, o:n.o})); }
   t.bars = nb; dirty = true; syncClear(); save();
 });
+$('#surf').addEventListener('click', () => { S.surface = S.surface === 'valves' ? 'pads' : 'valves'; buildPads(); save(); });
 $('#clear').addEventListener('click', () => { const t = cur(); if(!t.notes.length) return; pushUndo(); releaseAll(); t.notes = []; dirty = true; syncClear(); save(); });
 
 function setBpm(v){
