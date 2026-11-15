@@ -144,7 +144,8 @@ select:disabled{opacity:.35}
 .vo[aria-pressed="true"]{background:var(--lane);border-color:var(--lane);color:var(--chassis)}
 #vflip{height:30px;flex:none;border-radius:8px;border:1px solid var(--line);background:var(--panel);
   font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
-.vkeys{grid-column:2;grid-row:2;display:flex;gap:8px;align-items:flex-start;min-width:0;min-height:0}
+.vkeys{grid-column:2;grid-row:2;display:grid;place-items:center;min-width:0;min-height:0}
+.vfan{width:80%;height:58%;display:flex;gap:8px;align-items:flex-start;transform:rotate(-28deg)}
 .vkey{flex:1;min-width:0;height:66%;border-radius:16px;background:var(--key-hi);border:1px solid var(--line);
   transform:translateY(var(--drop,0%));touch-action:none;display:flex;align-items:flex-end;justify-content:center;
   padding:0 0 10px;font-family:var(--mono);font-size:15px;font-weight:500;color:var(--dim)}
@@ -155,7 +156,8 @@ select:disabled{opacity:.35}
 .vkey.down{background:var(--lane);border-color:var(--lane);color:var(--chassis)}
 .pads.valves.lefty{grid-template-columns:1fr auto}
 .pads.valves.lefty .voct{grid-column:2}
-.pads.valves.lefty .vkeys{grid-column:1;flex-direction:row-reverse}
+.pads.valves.lefty .vkeys{grid-column:1}
+.pads.valves.lefty .vfan{flex-direction:row-reverse;transform:rotate(28deg)}
 .pads.valves.lefty .vcell .dots{flex-direction:row-reverse}
 
 @media (orientation:landscape) and (max-height:540px){
@@ -633,9 +635,9 @@ function buildValves(){
       [0,1,2,3].map(k => `<i${VIDX[i] >> k & 1 ? ' class="f"' : ''}></i>`).join('')}</span></div>`;
   h += '</div><div class="voct">';
   for(const o of [2,1,0,-1,-2]) h += `<button class="vo" data-o="${o}" aria-pressed="${o === tr.oct}">${noteName(0, o)}</button>`;
-  h += '<button id="vflip" aria-label="Flip layout for the other hand">Flip</button></div><div class="vkeys">';
+  h += '<button id="vflip" aria-label="Flip layout for the other hand">Flip</button></div><div class="vkeys"><div class="vfan">';
   ['1','2','3','4'].forEach((l,b) => { h += `<button class="vkey" data-b="${b}" aria-label="Valve ${l}">${l}</button>`; });
-  padsEl.innerHTML = h + '</div>';
+  padsEl.innerHTML = h + '</div></div>';
   padEls = []; padsEl.querySelectorAll('.vcell').forEach(el => padEls[+el.dataset.i] = el);
   litPrev = new Set();
 }
