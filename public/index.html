@@ -142,7 +142,7 @@ select:disabled{opacity:.35}
 .vo{flex:1;min-height:0;border-radius:10px;background:var(--key);border:1px solid var(--line);
   font-family:var(--mono);font-size:13px;font-weight:500;color:var(--ink);touch-action:none}
 .vo[aria-pressed="true"]{background:var(--lane);border-color:var(--lane);color:var(--chassis)}
-#vflip{height:30px;flex:none;border-radius:8px;border:1px solid var(--line);background:var(--panel);
+#vflip,#vfull{height:30px;flex:none;border-radius:8px;border:1px solid var(--line);background:var(--panel);
   font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
 .vkeys{grid-column:2;grid-row:2;display:grid;place-items:center;min-width:0;min-height:0}
 .vfan{width:80%;height:58%;display:flex;gap:8px;align-items:flex-start;transform:rotate(-28deg)}
@@ -160,10 +160,25 @@ select:disabled{opacity:.35}
 .pads.valves.lefty .vfan{flex-direction:row-reverse;transform:rotate(28deg)}
 .pads.valves.lefty .vcell .dots{flex-direction:row-reverse}
 
+.app.full .top,.app.full .lanes,.app.full .strip{display:none}
+.app.full{max-width:none}
+@media (orientation:portrait){
+  .app.full .pads.valves{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto}
+  .app.full .pads.valves .voct{grid-column:1;grid-row:3;flex-direction:row-reverse;width:auto;height:52px}
+  .app.full .pads.valves .vkeys{grid-column:1}
+  .app.full #vflip,.app.full #vfull{height:auto;width:46px;order:-1}
+  .app.full .vfan{width:84%;height:36%;transform:rotate(-40deg)}
+  .app.full .pads.valves.lefty .vfan{transform:rotate(40deg)}
+}
 @media (orientation:landscape) and (max-height:540px){
   .app{max-width:none;grid-template-rows:minmax(0,1fr);grid-template-columns:minmax(300px,5fr) 6fr}
   .play,.rec{width:48px}
   .tbtn.txt{letter-spacing:.03em;padding:0 2px}
+}
+.app.full{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+@media (orientation:landscape){
+  .app.full .vfan{width:55%;height:66%;transform:rotate(-12deg)}
+  .app.full .pads.valves.lefty .vfan{transform:rotate(12deg)}
 }
 @media (prefers-reduced-motion:reduce){.counting .rec i{animation:none}}
 </style>
@@ -590,7 +605,21 @@ padsEl.addEventListener('pointerdown', e => {
 });
 const vUp = e => vRelease(e.pointerId);
 window.addEventListener('pointerup', vUp); window.addEventListener('pointercancel', vUp);
-padsEl.addEventListener('click', e => { if(e.target.closest('#vflip')){ S.lefty = !S.lefty; buildPads(); save(); } });
+let full = false;
+function setFull(on){
+  full = on; app.classList.toggle('full', full);
+  const b = $('#vfull'); if(b) b.textContent = full ? 'Exit' : 'Full';
+  try{
+    const d = document, el = d.documentElement;
+    if(full && !d.fullscreenElement && el.requestFullscreen) el.requestFullscreen().catch(() => {});
+    else if(!full && d.fullscreenElement && d.exitFullscreen) d.exitFullscreen().catch(() => {});
+  }catch(e){}
+  dirty = true;
+}
+padsEl.addEventListener('click', e => {
+  if(e.target.closest('#vflip')){ S.lefty = !S.lefty; buildPads(); save(); }
+  else if(e.target.closest('#vfull')) setFull(!full);
+});
 const padAt = (x,y) => { const el = document.elementFromPoint(x,y); const pad = el && el.closest && el.closest('.pad'); return pad ? +pad.dataset.i : -1; };
 padsEl.addEventListener('pointerdown', e => {
   const pad = e.target.closest('.pad'); if(!pad) return;
@@ -611,7 +640,7 @@ function buildPads(){
   const tr = cur(), drums = tr.sound === 'drums', cols = drums ? 4 : 5, rows = drums ? 3 : 4, len = scaleOf().length;
   const sb = $('#surf'); sb.setAttribute('aria-pressed', S.surface === 'valves'); sb.disabled = drums;
   if(S.surface === 'valves' && !drums){ buildValves(); return; }
-  padsEl.classList.remove('valves','lefty');
+  padsEl.classList.remove('valves','lefty'); if(full) setFull(false);
   padsEl.style.setProperty('--cols', cols); padsEl.style.setProperty('--rows', rows);
   padsEl.classList.toggle('drums', drums);
   let h = '';
@@ -635,7 +664,7 @@ function buildValves(){
       [0,1,2,3].map(k => `<i${VIDX[i] >> k & 1 ? ' class="f"' : ''}></i>`).join('')}</span></div>`;
   h += '</div><div class="voct">';
   for(const o of [2,1,0,-1,-2]) h += `<button class="vo" data-o="${o}" aria-pressed="${o === tr.oct}">${noteName(0, o)}</button>`;
-  h += '<button id="vflip" aria-label="Flip layout for the other hand">Flip</button></div><div class="vkeys"><div class="vfan">';
+  h += '<button id="vflip" aria-label="Flip layout for the other hand">Flip</button><button id="vfull" aria-label="Toggle fullscreen valves">' + (full ? 'Exit' : 'Full') + '</button></div><div class="vkeys"><div class="vfan">';
   ['1','2','3','4'].forEach((l,b) => { h += `<button class="vkey" data-b="${b}" aria-label="Valve ${l}">${l}</button>`; });
   padsEl.innerHTML = h + '</div></div>';
   padEls = []; padsEl.querySelectorAll('.vcell').forEach(el => padEls[+el.dataset.i] = el);
